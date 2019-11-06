@@ -1,5 +1,7 @@
+import 'package:app_5_gifs/app/views/GifView.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:app_5_gifs/app/services/GifService.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class HomeView extends StatefulWidget {
@@ -13,14 +15,22 @@ class _HomeViewState extends State<HomeView> {
 
   final _searchTextController = TextEditingController();
 
-  int _offset;
+  int _offset = 0;
+
+  String _query;
 
   _getGifs() async{
-    String query = _searchTextController.text;
-    if(query != "" && query != null)
-      return gifService.getSearchGifList(query, offset: _offset ?? 0);
+    if(_query != "" && _query != null) {
+      return gifService.getSearchGifList(_query, offset: _offset ?? 0);
+    }
     else
       return gifService.getTrendingGifList();
+  }
+  _getCount(List data) {
+    if(_query != "" && _query != null) {
+      return data.length+1;
+    }
+    return data.length;
   }
 
 
@@ -51,6 +61,12 @@ class _HomeViewState extends State<HomeView> {
     // Return Text Field
     return TextField(
       controller: _searchTextController,
+      onSubmitted: (text){
+        setState(() {
+          _query = text;
+          _offset = 0;
+        });
+      },
       decoration: InputDecoration(
           labelText: "Pesquisar GIFs",
           labelStyle: TextStyle(color: Colors.white, fontSize: 18),
@@ -105,16 +121,48 @@ class _HomeViewState extends State<HomeView> {
           mainAxisSpacing: 10,
           crossAxisSpacing: 10
         ),
-        itemCount: snapshot.data.length,
+        itemCount: _getCount(snapshot.data),
         itemBuilder: (context, index){
-          return GestureDetector(
-            child: CachedNetworkImage(
-              imageUrl: snapshot.data[index].url,
-              placeholder: (context, url) => _progressIndicator(),
-              errorWidget: (context, url, error) => Icon(Icons.error),
-            )
-
-          );
+          if(_query == null || index < snapshot.data.length){
+            return GestureDetector(
+              child: CachedNetworkImage(
+                  imageUrl: snapshot.data[index].url,
+                  placeholder: (context, url) => _progressIndicator(),
+                  errorWidget: (context, url, error) => Icon(Icons.error),
+                ),
+                onLongPress: (){
+                  //Share.share(snapshot.data[index].url);
+                },
+                onTap: (){
+                  Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => GifView(snapshot.data[index])
+                    )
+                  );
+                },
+            );
+          } else {
+            return Container(
+              alignment: Alignment.center,
+              child: GestureDetector(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Icon(Icons.add, color: Colors.white, size: 70),
+                    Text("Carregar Mais", style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22
+                    ),)
+                  ],
+                ),
+                onTap: (){
+                  setState(() {
+                    _offset += 19;
+                  });
+                },
+              )
+            );
+          }
         });
   }
 
